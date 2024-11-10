@@ -3,8 +3,10 @@
 #include <string.h>
 #include <ctype.h>
 #include <direct.h>
+#include <stdint.h>
 
 #define BUFFER_SIZE 1024
+uint64_t length = 0ULL;
 
 
 unsigned char nucleotide_to_bits(char nucleotide, int is_rna) {
@@ -21,15 +23,9 @@ unsigned char nucleotide_to_bits(char nucleotide, int is_rna) {
 }
 
 
-void write_compressed_sequence(FILE *output_file, const char *sequence, int is_rna, unsigned int length) {
+void write_compressed_sequence(FILE *output_file, const char *sequence, int is_rna) {
     unsigned char byte = 0;
     int bit_pos = 6;
-
-    byte = is_rna ? 0x01 : 0x00;
-    fwrite(&byte, sizeof(byte), 1, output_file);
-    fwrite(&length, sizeof(length), 1, output_file);
-    printf("%d\n", length);
-    byte = 0;
 
     for (int i = 0; sequence[i] != '\0'; i++) {
         char nucleotide = sequence[i];
@@ -37,7 +33,7 @@ void write_compressed_sequence(FILE *output_file, const char *sequence, int is_r
 
         unsigned char bits = nucleotide_to_bits(nucleotide, is_rna);
         if (bits == 0xFF) {
-            fprintf(stderr, "Error: Mismatched DNA/RNA nucleotide: %c\n", nucleotide);
+            fprintf(stderr, "Error: Mismatched DNA/RNA nucleotide: %c\n", nucleotide); // ovo isto idiot proofat
             exit(EXIT_FAILURE);
         }
 
@@ -49,11 +45,19 @@ void write_compressed_sequence(FILE *output_file, const char *sequence, int is_r
             byte = 0;
             bit_pos = 6;
         }
+
+        length++;
     }
 
     if (bit_pos < 6) {
         fwrite(&byte, sizeof(byte), 1, output_file);
     }
+}
+
+
+void update_sequence_size(FILE *output_file) {
+    fseek(output_file, 1, SEEK_SET);
+    fwrite(&length, sizeof(length), 1, output_file);
 }
 
 
@@ -116,7 +120,7 @@ int main(int argc, char *argv[]) {
     }
 
     const char *fasta_file = argv[1];
-    int is_rna = strcmp(argv[2], "rna") == 0 ? 1 : 0;
+    unsigned char is_rna = strcmp(argv[2], "rna") == 0 ? 0x01 : 0x00;
 
     char foldername[200];
     create_directories(fasta_file, foldername, sizeof(foldername));
@@ -130,12 +134,16 @@ int main(int argc, char *argv[]) {
     char buffer[BUFFER_SIZE];
     char sequence[BUFFER_SIZE * 1024];
     sequence[0] = '\0';
+
+    unsigned int sequence_length = 0;
+
     FILE *output_file = NULL;
 
     while (fgets(buffer, sizeof(buffer), input_file)) {
         if (buffer[0] == '>') {
             if (output_file) {
-                write_compressed_sequence(output_file, sequence, is_rna, strlen(sequence));
+                write_compressed_sequence(output_file, sequence, is_rna);
+                update_sequence_size(output_file);
                 fclose(output_file);
             }
 
@@ -147,7 +155,7 @@ int main(int argc, char *argv[]) {
 
             char output_filename[200];
             snprintf(output_filename, sizeof(output_filename), "output_bin/%s/%s.bin", foldername, sequence_description);
-            printf("%s\n", output_filename);
+
             output_file = fopen(output_filename, "wb");
             if (!output_file) {
                 perror("Error creating FASTA output file");
@@ -155,15 +163,28 @@ int main(int argc, char *argv[]) {
                 return EXIT_FAILURE;
             }
 
+            fwrite(&is_rna, sizeof(is_rna), 1, output_file);
+            length = 0;
+            fwrite(&length, sizeof(length), 1, output_file);
+
             sequence[0] = '\0';
+            sequence_length = 0;
         } else {
+            size_t buffer_length = strlen(buffer);
+            if (sequence_length + buffer_length >= sizeof(sequence) - 1) {
+                write_compressed_sequence(output_file, sequence, is_rna);
+                sequence[0] = '\0';
+                sequence_length = 0;
+            }
+            sequence_length += buffer_length;
             strcat(sequence, buffer);
         }
     }
 
     if (output_file && strlen(sequence) > 0) {
-        unsigned int length = get_number_of_nucleotides(sequence);
-        write_compressed_sequence(output_file, sequence, is_rna, length);
+        write_compressed_sequence(output_file, sequence, is_rna);
+        printf("%lu\n", length);
+        update_sequence_size(output_file);
         fclose(output_file);
     }
 

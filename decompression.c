@@ -4,6 +4,7 @@
 #include <ctype.h>
 #include <dirent.h>
 #include <direct.h>
+#include <stdint.h>
 
 #define BUFFER_SIZE 1024
 
@@ -26,7 +27,7 @@ void write_decompressed_sequence(FILE *output_file, FILE *input_file, char *entr
 
     unsigned char byte;
     int is_rna;
-    unsigned int length;
+    uint64_t length;
 
     fread(&byte, sizeof(byte), 1, input_file);
     if (byte == 0x01) {
@@ -38,13 +39,12 @@ void write_decompressed_sequence(FILE *output_file, FILE *input_file, char *entr
     }
 
     fread(&length, sizeof(length), 1, input_file);
-    printf("%d\n", length);
+    printf("%lu\n", length);
 
     int line_count = 0;
-    unsigned int total_count = 0;
+    uint64_t total_count = 0;
     unsigned char mask = 0b11000000;
     char nucleotide;
-    
     while (fread(&byte, sizeof(byte), 1, input_file) == 1) {
         for(int i = 0; i < 4; i++) {
             line_count++;
@@ -56,13 +56,13 @@ void write_decompressed_sequence(FILE *output_file, FILE *input_file, char *entr
                 line_count = 0;
             }
             if (total_count == length) {
-                fputs("\n\n\n", output_file);
+                fputs("\n\n", output_file);
                 return;
             }
         }
     }
 
-    fputs("\n\n\n", output_file);
+    fputs("\n\n", output_file);
 }
 
 
@@ -102,6 +102,7 @@ int main(int argc, char *argv[]) {
     sequence_name++;
     char sequence_name_buffer[200];
     snprintf(sequence_name_buffer, sizeof(sequence_name_buffer), "output_fasta/%s.fasta", sequence_name);
+    printf("%s\n", sequence_name_buffer);
 
     FILE *output_file = fopen(sequence_name_buffer, "w");
     if (!output_file) {
