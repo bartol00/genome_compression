@@ -6,8 +6,6 @@
 #include <direct.h>
 #include <stdint.h>
 
-#define BUFFER_SIZE 1024
-
 
 char bits_to_nucleotide(unsigned char bits, int is_rna) {
     switch (bits) {
@@ -22,120 +20,171 @@ char bits_to_nucleotide(unsigned char bits, int is_rna) {
 }
 
 
-void write_decompressed_sequence(FILE *output_file, FILE *input_file, char *entry_name) {
-    fputs(entry_name, output_file);
-
+void write_decompressed_sequence(FILE *input_file, FILE *output_file) {
+    unsigned char is_rna;
     unsigned char byte;
-    int is_rna;
-    uint64_t length;
-
-    fread(&byte, sizeof(byte), 1, input_file);
-    if (byte == 0x01) {
-        is_rna = 1;
-    } else if (byte == 0x00) {
-        is_rna = 0;
-    } else {
-        printf("Is RNA/DNA error\n"); // ovo ce trebat jos idiot-proofat
-    }
-
-    fread(&length, sizeof(length), 1, input_file);
-    printf("%lu\n", length);
-
-    int line_count = 0;
-    uint64_t total_count = 0;
+    uint16_t description_length;
+    uint64_t sequence_length;
+    int line_count;
+    uint64_t total_count;
     unsigned char mask = 0b11000000;
     char nucleotide;
-    while (fread(&byte, sizeof(byte), 1, input_file) == 1) {
-        for(int i = 0; i < 4; i++) {
-            line_count++;
-            total_count++;
-            nucleotide = bits_to_nucleotide((byte & (mask >> (2*i))) >> (6 - 2*i), is_rna);
-            fputc(nucleotide, output_file);
-            if (line_count == 70) {
-                fputc('\n', output_file);
-                line_count = 0;
-            }
-            if (total_count == length) {
-                fputs("\n\n", output_file);
-                return;
+    uint8_t loop_flag;
+
+    fread(&is_rna, sizeof(is_rna), 1, input_file);
+
+    while (fread(&description_length, sizeof(description_length), 1, input_file) == 1) {
+        loop_flag = 1;
+        line_count = 0;
+        total_count = 0;
+        char description_buffer[description_length];
+        fread(description_buffer, sizeof(char), description_length, input_file);
+        fwrite(description_buffer, sizeof(description_buffer), 1, output_file);
+        fputc('\n', output_file);
+
+        fread(&sequence_length, sizeof(sequence_length), 1, input_file);
+        // printf("Description length: %u\n", description_length);
+        // printf("sequence length: %lu\n", sequence_length);
+
+        for (uint64_t i = 0; i < ((sequence_length + 3) / 4); i++) {
+            fread(&byte, sizeof(byte), 1, input_file);
+            for (int i = 0; i < 4; i++) {
+                line_count++;
+                total_count++;
+                nucleotide = bits_to_nucleotide((byte & (mask >> (2*i))) >> (6 - 2*i), is_rna);
+                fputc(nucleotide, output_file);
+                if (line_count == 70) {
+                    fputc('\n', output_file);
+                    line_count = 0;
+                }
+                if (total_count == sequence_length) {
+                    break;
+                }
             }
         }
-    }
 
-    fputs("\n\n", output_file);
+        fputs("\n\n\n", output_file);
+    }
 }
 
 
-void desanitize_filename(char *filename) {
-    int i = 0, j = 0;
-
-    while (filename[i] != '\0') {
-        if (filename[i] == '_') {
-            filename[j++] = '.';
-        } else {
-            filename[j++] = filename[i];
-        }
-        i++;
+int input_validation(const char *input_dir, const char *output_dir) {
+    // check to see if the input file exists
+    if (access(input_dir, F_OK) != 0) {
+        fprintf(stderr, "Input file does not exist or cannot be accessed\n");
+        return 1;
     }
 
-    filename[j] = '\0';
+    // check to see if the input file is a binary file
+    const char *dot = strrchr(input_dir, '.');
+    if (!dot || strcmp(dot, ".bin") != 0) {
+        fprintf(stderr, "Input file is not a binary file\n");
+        return 1;
+    }
+
+    // check to see if the output directory exists
+    if (access(output_dir, F_OK) != 0) {
+        fprintf(stderr, "Output directory does not exist or cannot be accessed\n");
+        return 1;
+    }
+
+    return 0;
+}
+
+
+void remove_trailing_slashes(char *str) {
+    int len = strlen(str);
+    while (len > 0 && str[len - 1] == '/') {
+        str[len - 1] = '\0';
+        len--;
+    }
+}
+
+
+void get_output_path(const char *input_dir, const char *output_dir, char *output_filename) {
+    const char *dot = strrchr(input_dir, '.');  // gets the last position of '.', i.e. the beginning index of the file extension
+    const char *slash = strrchr(input_dir, '/');  // gets the last position of '/', i.e. the beginning index of the filename
+    const char *filename_start = slash ? slash + 1 : input_dir; // gets the filename without the initial '/' character
+    char filename_buffer[200];
+
+    strncpy(filename_buffer, filename_start, dot - filename_start);
+    filename_buffer[dot - filename_start] = '\0'; // contents of filename_buffer are set to the filename without the extension
+
+    // new file extension is added to the filename and the final output path is set
+    snprintf(output_filename, 300, "%s/%s.fasta", output_dir, filename_buffer);
+}
+
+
+void get_binary_output (FILE *input_file) {
+    // optional function for getting the hex representation of the input binary file
+    // warning: will significantly slow down the decompression process if activated
+    fseek(input_file, 0, SEEK_SET);
+    unsigned char byte;
+    int counter = 0;
+    int remainder;
+    while (fread(&byte, sizeof(byte), 1, input_file) == 1)
+    {
+        remainder = counter % 10;
+        if (remainder == 0) {
+            printf("\n");
+            if (counter < 100) {
+                printf("   %d:", counter);
+            } else if (counter < 1000) {
+                printf("  %d:", counter);
+            } else if (counter < 10000) {
+                printf(" %d:", counter);
+            } else {
+                printf("%d:", counter);
+            }
+        }
+        
+        printf("  %02X (%d)", byte, remainder);
+        
+        counter++;
+    }
+    printf("\n");
 }
 
 
 int main(int argc, char *argv[]) {
-    if (argc != 2) {
-        fprintf(stderr, "Usage: %s <path_to_compressed_folder>\n", argv[0]);
+    if (argc != 3) {
+        fprintf(stderr, "Usage: %s <path_to_compressed_folder> <output_dir>\n", argv[0]);
         return EXIT_FAILURE;
     }
 
-    mkdir("output_fasta");
+    const char *input_dir = argv[1];
+    remove_trailing_slashes(argv[2]); // unnecessary '/' characters at the end of the output path string are removed
+    const char *output_dir = argv[2];
 
-    const char *dir_path = argv[1];
-    DIR *dir = opendir(dir_path);
-
-    if (dir == NULL) {
-        perror("Error opening directory");
+    // input validation is performed on the program arguments before they are passed to the rest of the program
+    if (input_validation(input_dir, output_dir) == 1) {
         return EXIT_FAILURE;
     }
 
-    const char *sequence_name = strrchr(dir_path, '\\');
-    sequence_name++;
-    char sequence_name_buffer[200];
-    snprintf(sequence_name_buffer, sizeof(sequence_name_buffer), "output_fasta/%s.fasta", sequence_name);
-    printf("%s\n", sequence_name_buffer);
-
-    FILE *output_file = fopen(sequence_name_buffer, "w");
-    if (!output_file) {
-        perror("Error opening output FASTA file\n");
+    // input file stream is opened
+    FILE *input_file = fopen(input_dir, "rb");
+    if (!input_file) {
+        fprintf(stderr, "Error opening input binary file\n");
         return EXIT_FAILURE;
     }
 
-    struct dirent *entry;
-    while ((entry = readdir(dir)) != NULL) {
-        const char *dot = strrchr(entry->d_name, '.');
-
-        char bin_name_buffer[400]; 
-        char entry_name[200];
-
-        if (dot != NULL && strcmp(dot, ".bin") == 0) {
-            snprintf(entry_name, sizeof(entry_name), ">%s\n", entry->d_name);
-            desanitize_filename(entry_name);
-
-            snprintf(bin_name_buffer, sizeof(bin_name_buffer), "%s\\%s", dir_path, entry->d_name);
-            FILE *input_file = fopen(bin_name_buffer, "rb");
-            if (!input_file) {
-                perror("Error opening input BIN file\n");
-                fclose(output_file);
-                return EXIT_FAILURE;
-            }
-
-            write_decompressed_sequence(output_file, input_file, entry_name);
-
-            fclose(input_file);
-        }
+    // output filename is determined from the input filename and the output file stream is opened
+    char output_filename[300];
+    get_output_path(input_dir, output_dir, output_filename);
+    FILE *output_file = fopen(output_filename, "w");
+    if (!input_file) {
+        fclose(input_file);
+        fprintf(stderr, "Error opening output FASTA file\n");
+        return EXIT_FAILURE;
     }
 
-    closedir(dir);
+    // sequence is decompressed from a binary file and written to an output FASTA file of the same name
+    write_decompressed_sequence(input_file, output_file);
+
+    // get_binary_output(input_file);
+
+    // mandatory closing of file streams to prevent memory leaks
+    fclose(input_file);
     fclose(output_file);
     return EXIT_SUCCESS;
 }
