@@ -6,8 +6,10 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <ctype.h>
+#include <time.h>
 
-#define BUFFER_SIZE 1024
+
+#define BUFFER_SIZE 1024 // defualt line buffer maximum size of 1024 characters
 uint64_t length; // the number of nucleotides in a sequence 
 uint64_t position = 1ULL; // the position of the bytes that describe how many nucleotides in the sequence there are
 
@@ -30,28 +32,34 @@ void write_compressed_sequence(FILE *output_file, const char *sequence, int is_r
     unsigned char byte = 0;
     int bit_pos = 6;
 
+    // all characters in a sequence buffer are iterated through
     for (int i = 0; sequence[i] != '\0'; i++) {
         char nucleotide = sequence[i];
         if (nucleotide == '\n') continue;
 
+        // raw nucleotide char is converted to a char where the lower 2 bits are the nucleotide representation
         unsigned char bits = nucleotide_to_bits(nucleotide, is_rna);
         if (bits == 0xFF) {
-            fprintf(stderr, "Error: Mismatched DNA/RNA nucleotide: %c\n", nucleotide); // ovo isto idiot proofat
+            fprintf(stderr, "Error: Mismatched DNA/RNA nucleotide: %c\n", nucleotide);
             exit(EXIT_FAILURE);
         }
 
+        // bits are shifted to the left and the bit position value is updated
         byte |= (bits << bit_pos);
         bit_pos -= 2;
 
+        // if byte is complete, it is written to the binary file and the byte and bit position values are updated
         if (bit_pos < 0) {
             fwrite(&byte, sizeof(byte), 1, output_file);
             byte = 0;
             bit_pos = 6;
         }
 
+        // global length value is incremented 
         length++;
     }
 
+    // leftover bits are written to the binary file
     if (bit_pos < 6) {
         fwrite(&byte, sizeof(byte), 1, output_file);
     }
@@ -120,6 +128,11 @@ void remove_trailing_slashes(char *str) {
 
 
 int main(int argc, char *argv[]) {
+    // the variables to record how long program execution takes
+    clock_t start, end; 
+    start = clock();
+    double cpu_time_used;
+
     // check to see if the necessary arguments are accounted for
     if (argc != 4) {
         fprintf(stderr, "Usage: %s <fasta_file> <dna_or_rna> <output_dir>\n", argv[0]);
@@ -187,7 +200,7 @@ int main(int argc, char *argv[]) {
             // '\n' character at the end of the description string is removed
             buffer[strlen(buffer)-1] = '\0';
 
-            // the length of the sequence is set/returned to 0
+            // the length of the sequence is set/returned to 0 for every sequence in the input file
             length = 0ULL;
 
             // length of description string is calculated and added to output file, along with the description contents
@@ -222,5 +235,11 @@ int main(int argc, char *argv[]) {
     // mandatory closing of file streams to prevent memory leaks
     fclose(input_file);
     fclose(output_file);
+
+    // prints out the time it took to execute the program in seconds
+    end = clock();
+    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+    printf("Time taken: %f seconds\n", cpu_time_used);
+
     return EXIT_SUCCESS;
 }
