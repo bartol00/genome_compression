@@ -46,4 +46,6 @@ Time required to decompress:   27.851 seconds<br>
 
 Note: the program does not support ambiguous nucleotides (for example: the undefined character 'N'). If such a sequence is provided, the program will create an incomplete binary file and return an error.<br><br>
 
-Future ideas: adding multithreading to the compression algorithm for speed increases
+Future ideas: 
+1. Adding multithreading to the compression algorithm for speed increases
+2. Adding a GUI
