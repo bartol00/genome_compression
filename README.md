@@ -1,5 +1,12 @@
 A compression/decompression program designed for the compresion of FASTA genomic sequences into a binary format, reducing the file size by roughly 4 times. Ideal for storage optimization when dealing with a large number of genomes in FASTA form.<br><br>
 
+The program has a separate GUI written in Python. The user needs to download the whole archive and store all the files in the same location for the GUI components to work. The GUI components are:
+
+- compression_gui.exe
+- decompression_gui.exe
+
+<br>
+
 The compression program works by taking command line arguments from the user, where the input file directory, output directory and the nucleic acid of the genome are specififed. If the user wishes to run the program from the CLI, the argument setup is the following:
 
 <pre>
@@ -48,4 +55,4 @@ Note: the program does not support ambiguous nucleotides (for example: the undef
 
 Future ideas: 
 1. Adding multithreading to the compression algorithm for speed increases
-2. Adding a GUI
+2. ~~Adding a GUI~~
