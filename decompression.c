@@ -173,7 +173,7 @@ int main(int argc, char *argv[]) {
 
     // check to see if the necessary arguments are accounted for
     if (argc != 3) {
-        fprintf(stderr, "Usage: %s <path_to_compressed_folder> <output_dir>\n", argv[0]);
+        fprintf(stderr, "Usage: %s <path_to_compressed_file> <output_dir>\n", argv[0]);
         return EXIT_FAILURE;
     }
 

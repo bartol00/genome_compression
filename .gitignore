@@ -1,3 +1,5 @@
 output_bin/
 output_fasta/
 input_fasta/
+build/
+dist/
