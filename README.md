@@ -37,18 +37,24 @@ Ebola virus strain Ebola virus/M.fascicularis-wt/GAB/2001/untreated-CCL053D9, co
 Genome size: 18871 bp
 Time required to compress:    0.003 seconds
 Time required to decompress:  0.004 seconds
+Uncompressed size:  18.7 KB
+Compressed size:    5.07 KB
 
 Stenotrophomonas maltophilia K279a complete genome, strain K279a
 <a href="https://www.ncbi.nlm.nih.gov/nuccore/AM743169.1">https://www.ncbi.nlm.nih.gov/nuccore/AM743169.1</a>
 Genome size: 4851126 bp
 Time required to compress:    8.579 seconds
 Time required to decompress:  0.516 seconds
+Uncompressed size:  4.69 MB
+Compressed size:    1.15 MB
 
 Homo sapiens isolate NA21110 chromosome 1, whole genome shotgun sequence
 <a href="https://www.ncbi.nlm.nih.gov/nuccore/CM089663.1">https://www.ncbi.nlm.nih.gov/nuccore/CM089663.1</a>
 Genome size: 259033254 bp
-Time required to compress:    491.151 seconds
-Time required to decompress:   27.851 seconds<br>
+Time required to compress:    282.781 seconds
+Time required to decompress:   16.463 seconds
+Uncompressed size:   250  MB
+Compressed size:     61.7 MB<br>
 </pre>
 
 Note: the program does not support ambiguous nucleotides (for example: the undefined character 'N'). If such a sequence is provided, the program will create an incomplete binary file and return an error.<br><br>
