@@ -62,3 +62,4 @@ Note: the program does not support ambiguous nucleotides (for example: the undef
 Future ideas: 
 1. Adding multithreading to the compression algorithm for speed increases
 2. ~~Adding a GUI~~
+3. Adding primary and secondary protein structure visualization directly from binary file
