@@ -16,11 +16,11 @@ $ {program name} {path to FASTA input file} {RNA/DNA} {path to desired output di
 The compression program creates a binary (.bin) output file that the decompression program can interpret back to the same FASTA genomic sequence. Multiple distinct sequences in a single file are also permitted. In case of multiple sequences, the nucleic acid specification byte remains the same for every sequence in the file and is thus not repeated. The binary file specification is the following:
 
 <pre>
-Byte 0:                The nucleic acid specifier (RNA/DNA)
-Bytes 1-2:             The length of the sequence description in characters (M)  
-Bytes 3-(M+2):         The sequence description bytes  
-Bytes (M+3)-(M+10):    The length of the actual genomic sequence in base pairs (N)  
-Bytes (M+11)-(M+10+N): The genomic sequence characters<br>
+Byte                    0: The nucleic acid specifier (RNA/DNA)
+Bytes                 1-2: The length of the sequence description in characters (M)  
+Bytes             3-(M+2): The sequence description bytes  
+Bytes        (M+3)-(M+10): The length of the actual genomic sequence in base pairs (N)  
+Bytes (M+11)-(M+10+⌈N/4⌉): The genomic sequence characters<br>
 </pre>
 
 The decompression program creates the equivalent FASTA file from the binary file created by the compression program. It works by also taking command line arguments from the user, which specify the input file directory and the output directory. If the user wishes to run the program from the CLI, the argument setup is the following:
