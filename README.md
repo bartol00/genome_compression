@@ -1,4 +1,4 @@
-A compression/decompression program designed for the compresion of FASTA genomic sequences into a binary format, reducing the file size by roughly 4 times. Ideal for storage optimization when dealing with a large number of genomes in FASTA form.<br><br>
+A compression/decompression program designed for the compresion of FASTA genomic sequences into a binary format, where each nucleotide is represented by only 2 bits of data, reducing the file size by roughly 4 times. Ideal for storage optimization when dealing with a large number of genomes in FASTA form.<br><br>
 
 The program has a separate GUI written in Python. The user needs to download the whole archive and store all the files in the same location for the GUI components to work. The GUI components are:
 
